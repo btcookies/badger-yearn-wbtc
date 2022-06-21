@@ -4,7 +4,9 @@ pragma solidity ^0.6.12;
 import "deps/@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "deps/@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "./BaseSimpleWrapperUpgradeable.sol";
+import "./SettAccessControlDefended.sol";
 
+import "interfaces/badger/IGac.sol";
 import "interfaces/yearn/VaultApi.sol";
 import "interfaces/yearn/BadgerGuestlistApi.sol";
 
@@ -17,7 +19,7 @@ import "interfaces/yearn/BadgerGuestlistApi.sol";
     More Events
     Each action emits events to faciliate easier logging and monitoring
  */
-contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpgradeable, PausableUpgradeable {
+contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpgradeable, SettAccessControlDefended, PausableUpgradeable {
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 public DOMAIN_SEPARATOR;
@@ -26,6 +28,8 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
     bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
     uint256 constant MAX_BPS = 10000;
+
+    IGac public constant GAC = IGac(0x9c58B0D88578cd75154Bdb7C8B013f7157bae35a); // Set in initializer because of tests is unchangeable (because contract is upgradeable)
 
     /// @notice A record of states for signing / validating signatures
     mapping(address => uint256) public nonces;
@@ -53,9 +57,21 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
 
     VaultAPI public experimentalVault;
 
+    modifier whenNotPaused() override {
+        require(!paused(), "Pausable: paused");
+        require(!GAC.paused(), "Pausable: GAC Paused");
+        _;
+    }
+
+    /// Modifiers
+
     modifier onlyAffiliate() {
         require(msg.sender == affiliate);
         _;
+    }
+
+    function _blacklisted(address _account) internal view {
+        require(!GAC.isBlacklisted(_account), "blacklisted");
     }
 
     event PendingAffiliate(address affiliate);
@@ -209,6 +225,10 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
     /// @dev Deposit specified amount of token in wrapper for specified recipient
     /// @dev Variant without merkleProof
     function depositFor(address recipient, uint256 amount) public whenNotPaused returns (uint256 deposited) {
+        _defend();
+        _blacklisted(msg.sender);
+        _blacklisted(recipient);
+
         bytes32[] memory emptyProof = new bytes32[](0);
         deposited = depositFor(recipient, amount, emptyProof);
     }
@@ -216,6 +236,10 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
     /// @dev Deposit specified amount of token in wrapper for specified recipient
     /// @dev A merkle proof can be supplied to verify inclusion in merkle guest list if this functionality is active
     function depositFor(address recipient, uint256 amount, bytes32[] memory merkleProof) public whenNotPaused returns (uint256) {
+        _defend();
+        _blacklisted(msg.sender);
+        _blacklisted(recipient);
+
         if (address(guestList) != address(0)) {
             require(guestList.authorized(msg.sender, amount, merkleProof), "guest-list-authorization");
         }
@@ -231,6 +255,9 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
     /// @dev Deposit entire balance of token in wrapper
     /// @dev A merkle proof can be supplied to verify inclusion in merkle guest list if this functionality is active
     function deposit(bytes32[] calldata merkleProof) external whenNotPaused returns (uint256) {
+        _defend();
+        _blacklisted(msg.sender);
+        
         uint256 allAssets = token.balanceOf(address(msg.sender));
         return deposit(allAssets, merkleProof); // Deposit everything
     }
@@ -238,6 +265,9 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
     /// @dev Deposit specified amount of token in wrapper
     /// @dev A merkle proof can be supplied to verify inclusion in merkle guest list if this functionality is active
     function deposit(uint256 amount, bytes32[] calldata merkleProof) public whenNotPaused returns (uint256) {
+        _defend();
+        _blacklisted(msg.sender);
+
         if (address(guestList) != address(0)) {
             require(guestList.authorized(msg.sender, amount, merkleProof), "guest-list-authorization");
         }
@@ -252,10 +282,16 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
 
     /// @dev Withdraw all shares for the sender
     function withdraw() external whenNotPaused returns (uint256) {
+        _defend();
+        _blacklisted(msg.sender);
+
         return withdraw(balanceOf(msg.sender));
     }
 
     function withdraw(uint256 shares) public whenNotPaused returns (uint256 withdrawn) {
+        _defend();
+        _blacklisted(msg.sender);
+        
         withdrawn = _withdraw(msg.sender, shares, true, true); // `true` = withdraw from `bestVault`
         _burn(msg.sender, shares);
 
