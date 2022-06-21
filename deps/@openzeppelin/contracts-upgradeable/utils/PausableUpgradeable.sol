@@ -53,7 +53,7 @@ contract PausableUpgradeable is Initializable, ContextUpgradeable {
      *
      * - The contract must not be paused.
      */
-    modifier whenNotPaused() {
+    modifier whenNotPaused() virtual {
         require(!_paused, "Pausable: paused");
         _;
     }

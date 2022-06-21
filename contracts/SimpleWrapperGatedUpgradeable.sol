@@ -19,17 +19,26 @@ import "interfaces/yearn/BadgerGuestlistApi.sol";
     More Events
     Each action emits events to faciliate easier logging and monitoring
  */
-contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpgradeable, SettAccessControlDefended, PausableUpgradeable {
+contract SimpleWrapperGatedUpgradeable is
+    ERC20Upgradeable,
+    BaseSimpleWrapperUpgradeable,
+    PausableUpgradeable,
+    SettAccessControlDefended
+{
     /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 public constant DOMAIN_TYPEHASH =
+        keccak256(
+            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+        );
     bytes32 public DOMAIN_SEPARATOR;
 
     /// @notice The EIP-712 typehash for the permit struct used by the contract
-    bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 public constant PERMIT_TYPEHASH =
+        keccak256(
+            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+        );
 
     uint256 constant MAX_BPS = 10000;
-
-    IGac public constant GAC = IGac(0x9c58B0D88578cd75154Bdb7C8B013f7157bae35a); // Set in initializer because of tests is unchangeable (because contract is upgradeable)
 
     /// @notice A record of states for signing / validating signatures
     mapping(address => uint256) public nonces;
@@ -37,8 +46,6 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
     address public affiliate;
 
     address public pendingAffiliate;
-
-    address public treasury;
 
     // ===== GatedUpgradeable additional parameters =====
 
@@ -56,6 +63,10 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
     bool public experimentalMode;
 
     VaultAPI public experimentalVault;
+
+    address public treasury;
+
+    IGac public constant GAC = IGac(0x9c58B0D88578cd75154Bdb7C8B013f7157bae35a); // Set in initializer because of tests is unchangeable (because contract is upgradeable)
 
     modifier whenNotPaused() override {
         require(!paused(), "Pausable: paused");
@@ -87,7 +98,9 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
     event Mint(address indexed account, uint256 shares);
     event Burn(address indexed account, uint256 shares);
     event SetWithdrawalFee(uint256 withdrawalFee);
-    event SetWithdrawalMaxDeviationThreshold(uint256 withdrawalMaxDeviationThreshold);
+    event SetWithdrawalMaxDeviationThreshold(
+        uint256 withdrawalMaxDeviationThreshold
+    );
 
     function initialize(
         address _token,
@@ -101,7 +114,15 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
         _BaseSimpleWrapperUpgradeable_init(_token, _registry);
         __ERC20_init(name, symbol);
 
-        DOMAIN_SEPARATOR = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), keccak256(bytes("1")), _getChainId(), address(this)));
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                DOMAIN_TYPEHASH,
+                keccak256(bytes(name)),
+                keccak256(bytes("1")),
+                _getChainId(),
+                address(this)
+            )
+        );
         affiliate = msg.sender;
         guardian = _guardian;
         _setupDecimals(uint8(ERC20Upgradeable(address(token)).decimals()));
@@ -123,10 +144,18 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
         emit SetWithdrawalFee(withdrawalFee);
     }
 
-    function setWithdrawalMaxDeviationThreshold(uint256 _maxDeviationThreshold) external onlyAffiliate {
-        require(_maxDeviationThreshold <= MAX_BPS, "excessive-max-deviation-threshold");
+    function setWithdrawalMaxDeviationThreshold(uint256 _maxDeviationThreshold)
+        external
+        onlyAffiliate
+    {
+        require(
+            _maxDeviationThreshold <= MAX_BPS,
+            "excessive-max-deviation-threshold"
+        );
         withdrawalMaxDeviationThreshold = _maxDeviationThreshold;
-        emit SetWithdrawalMaxDeviationThreshold(withdrawalMaxDeviationThreshold);
+        emit SetWithdrawalMaxDeviationThreshold(
+            withdrawalMaxDeviationThreshold
+        );
     }
 
     function bestVault() public view returns (VaultAPI) {
@@ -134,8 +163,16 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
     }
 
     /// @dev Get estimated value of vault position for an account
-    function totalVaultBalance(address account) public view returns (uint256 balance) {
-        return experimentalVault.balanceOf(account).mul(experimentalVault.pricePerShare()).div(10**uint256(experimentalVault.decimals()));
+    function totalVaultBalance(address account)
+        public
+        view
+        returns (uint256 balance)
+    {
+        return
+            experimentalVault
+                .balanceOf(account)
+                .mul(experimentalVault.pricePerShare())
+                .div(10**uint256(experimentalVault.decimals()));
     }
 
     /// @dev Forward totalAssets from underlying vault
@@ -196,7 +233,10 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
         uint256 totalShares = totalSupply();
 
         if (totalShares > 0) {
-            return totalVaultBalance(address(this)).mul(numShares).div(totalShares);
+            return
+                totalVaultBalance(address(this)).mul(numShares).div(
+                    totalShares
+                );
         } else {
             return numShares;
         }
@@ -207,13 +247,21 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
         return VaultAPI(experimentalVault).pricePerShare();
     }
 
-    function totalWrapperBalance(address account) public view returns (uint256 balance) {
-        return balanceOf(account).mul(pricePerShare()).div(10**uint256(decimals()));
+    function totalWrapperBalance(address account)
+        public
+        view
+        returns (uint256 balance)
+    {
+        return
+            balanceOf(account).mul(pricePerShare()).div(
+                10**uint256(decimals())
+            );
     }
 
     function _sharesForValue(uint256 amount) internal view returns (uint256) {
         // total wrapper assets before deposit (assumes deposit already occured)
-        uint256 totalWrapperAssets = totalVaultBalance(address(this)).sub(amount);
+        uint256 totalWrapperAssets =
+            totalVaultBalance(address(this)).sub(amount);
 
         if (totalWrapperAssets > 0) {
             return totalSupply().mul(amount).div(totalWrapperAssets);
@@ -224,7 +272,11 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
 
     /// @dev Deposit specified amount of token in wrapper for specified recipient
     /// @dev Variant without merkleProof
-    function depositFor(address recipient, uint256 amount) public whenNotPaused returns (uint256 deposited) {
+    function depositFor(address recipient, uint256 amount)
+        public
+        whenNotPaused
+        returns (uint256 deposited)
+    {
         _defend();
         _blacklisted(msg.sender);
         _blacklisted(recipient);
@@ -235,13 +287,20 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
 
     /// @dev Deposit specified amount of token in wrapper for specified recipient
     /// @dev A merkle proof can be supplied to verify inclusion in merkle guest list if this functionality is active
-    function depositFor(address recipient, uint256 amount, bytes32[] memory merkleProof) public whenNotPaused returns (uint256) {
+    function depositFor(
+        address recipient,
+        uint256 amount,
+        bytes32[] memory merkleProof
+    ) public whenNotPaused returns (uint256) {
         _defend();
         _blacklisted(msg.sender);
         _blacklisted(recipient);
 
         if (address(guestList) != address(0)) {
-            require(guestList.authorized(msg.sender, amount, merkleProof), "guest-list-authorization");
+            require(
+                guestList.authorized(msg.sender, amount, merkleProof),
+                "guest-list-authorization"
+            );
         }
 
         uint256 shares = _deposit(msg.sender, amount);
@@ -254,22 +313,33 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
 
     /// @dev Deposit entire balance of token in wrapper
     /// @dev A merkle proof can be supplied to verify inclusion in merkle guest list if this functionality is active
-    function deposit(bytes32[] calldata merkleProof) external whenNotPaused returns (uint256) {
+    function deposit(bytes32[] calldata merkleProof)
+        external
+        whenNotPaused
+        returns (uint256)
+    {
         _defend();
         _blacklisted(msg.sender);
-        
+
         uint256 allAssets = token.balanceOf(address(msg.sender));
         return deposit(allAssets, merkleProof); // Deposit everything
     }
 
     /// @dev Deposit specified amount of token in wrapper
     /// @dev A merkle proof can be supplied to verify inclusion in merkle guest list if this functionality is active
-    function deposit(uint256 amount, bytes32[] calldata merkleProof) public whenNotPaused returns (uint256) {
+    function deposit(uint256 amount, bytes32[] calldata merkleProof)
+        public
+        whenNotPaused
+        returns (uint256)
+    {
         _defend();
         _blacklisted(msg.sender);
 
         if (address(guestList) != address(0)) {
-            require(guestList.authorized(msg.sender, amount, merkleProof), "guest-list-authorization");
+            require(
+                guestList.authorized(msg.sender, amount, merkleProof),
+                "guest-list-authorization"
+            );
         }
 
         uint256 shares = _deposit(msg.sender, amount);
@@ -288,15 +358,43 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
         return withdraw(balanceOf(msg.sender));
     }
 
-    function withdraw(uint256 shares) public whenNotPaused returns (uint256 withdrawn) {
+    function withdraw(uint256 shares)
+        public
+        whenNotPaused
+        returns (uint256 withdrawn)
+    {
         _defend();
         _blacklisted(msg.sender);
-        
+
         withdrawn = _withdraw(msg.sender, shares, true, true); // `true` = withdraw from `bestVault`
         _burn(msg.sender, shares);
 
         emit Withdraw(msg.sender, withdrawn);
         emit Burn(msg.sender, shares);
+    }
+
+    /// ERC20 Overrides
+
+    function transfer(address recipient, uint256 amount)
+        public
+        virtual
+        override
+        whenNotPaused
+        returns (bool)
+    {
+        return super.transfer(recipient, amount);
+    }
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public virtual override whenNotPaused returns (bool) {
+        require(
+            !GAC.transferFromDisabled(),
+            "transferFrom: GAC transferFromDisabled"
+        );
+        return super.transferFrom(sender, recipient, amount);
     }
 
     /**
@@ -321,8 +419,21 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
         require(owner != address(0), "permit: signature");
         require(block.timestamp <= deadline, "permit: expired");
 
-        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, amount, nonces[owner]++, deadline));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash));
+        bytes32 structHash =
+            keccak256(
+                abi.encode(
+                    PERMIT_TYPEHASH,
+                    owner,
+                    spender,
+                    amount,
+                    nonces[owner]++,
+                    deadline
+                )
+            );
+        bytes32 digest =
+            keccak256(
+                abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash)
+            );
 
         address signatory = ecrecover(digest, v, r, s);
         require(signatory == owner, "permit: unauthorized");
@@ -332,21 +443,29 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
 
     // @dev Pausing is optimized for speed of action. The guardian is intended to be the option with the least friction, though manager or affiliate can pause as well.
     function pause() external {
-        require(msg.sender == guardian || msg.sender == manager || msg.sender == affiliate, "only-authorized-pausers");
+        require(
+            msg.sender == guardian ||
+                msg.sender == manager ||
+                msg.sender == affiliate,
+            "only-authorized-pausers"
+        );
         _pause();
     }
 
     // @dev Unpausing requires a higher permission level than pausing, which is optimized for speed of action. The manager or affiliate can unpause
     function unpause() external {
-        require(msg.sender == manager || msg.sender == affiliate, "only-authorized-unpausers");
+        require(
+            msg.sender == manager || msg.sender == affiliate,
+            "only-authorized-unpausers"
+        );
         _unpause();
     }
 
     //note. sometimes when we deposit we "lose" money. Therefore our amount needs to be adjusted to reflect the true pricePerShare we received
-    function _deposit(
-        address depositor,
-        uint256 amount
-    ) internal returns (uint256 shares) {
+    function _deposit(address depositor, uint256 amount)
+        internal
+        returns (uint256 shares)
+    {
         VaultAPI _bestVault = bestVault();
         token.safeTransferFrom(depositor, address(this), amount);
 
@@ -357,14 +476,14 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
 
         shares = _bestVault.deposit(amount);
     }
-    
-    /// @dev Variant with withdrawal fee and verification of max loss. Used in withdraw functions. 
+
+    /// @dev Variant with withdrawal fee and verification of max loss. Used in withdraw functions.
     /// @dev Migrate functions use the variant from BaseWrapper without these features.
     function _withdraw(
         address receiver,
         uint256 shares, // if `MAX_UINT256`, just withdraw everything
         bool processWithdrawalFee, // If true, process withdrawal fee to affiliate
-        bool verifyMaxLoss // If true, ensure that the amount is within an expected range based on withdrawalMaxDeviationThreshold 
+        bool verifyMaxLoss // If true, ensure that the amount is within an expected range based on withdrawalMaxDeviationThreshold
     ) internal virtual returns (uint256 withdrawn) {
         VaultAPI _bestVault = bestVault();
 
@@ -381,7 +500,8 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
 
         // Process withdrawal fee
         if (withdrawalFee > 0 && processWithdrawalFee) {
-            uint256 withdrawalToAffiliate = withdrawn.mul(withdrawalFee).div(MAX_BPS);
+            uint256 withdrawalToAffiliate =
+                withdrawn.mul(withdrawalFee).div(MAX_BPS);
             withdrawn = withdrawn.sub(withdrawalToAffiliate);
 
             token.safeTransfer(affiliate, withdrawalToAffiliate);
@@ -393,9 +513,15 @@ contract SimpleWrapperGatedUpgradeable is ERC20Upgradeable, BaseSimpleWrapperUpg
     }
 
     // Require that difference between expected and actual values is less than the deviation threshold percentage
-    function _verifyWithinMaxDeviationThreshold(uint256 actual, uint256 expected) internal view {
+    function _verifyWithinMaxDeviationThreshold(
+        uint256 actual,
+        uint256 expected
+    ) internal view {
         uint256 diff = _diff(expected, actual);
-        require(diff <= expected.mul(withdrawalMaxDeviationThreshold).div(MAX_BPS), "wrapper/withdraw-exceed-max-deviation-threshold");
+        require(
+            diff <= expected.mul(withdrawalMaxDeviationThreshold).div(MAX_BPS),
+            "wrapper/withdraw-exceed-max-deviation-threshold"
+        );
     }
 
     /// @notice Utility function to diff two numbers, expects higher value in first position
