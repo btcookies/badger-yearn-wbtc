@@ -4,7 +4,6 @@ pragma solidity ^0.6.12;
 import "deps/@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "deps/@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "./BaseSimpleWrapperUpgradeable.sol";
-import "./SettAccessControlDefended.sol";
 
 import "interfaces/badger/IGac.sol";
 import "interfaces/yearn/VaultApi.sol";
@@ -22,8 +21,7 @@ import "interfaces/yearn/BadgerGuestlistApi.sol";
 contract SimpleWrapperGatedUpgradeable is
     ERC20Upgradeable,
     BaseSimpleWrapperUpgradeable,
-    PausableUpgradeable,
-    SettAccessControlDefended
+    PausableUpgradeable
 {
     /// @notice The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH =
@@ -277,7 +275,6 @@ contract SimpleWrapperGatedUpgradeable is
         whenNotPaused
         returns (uint256 deposited)
     {
-        _defend();
         _blacklisted(msg.sender);
         _blacklisted(recipient);
 
@@ -292,7 +289,6 @@ contract SimpleWrapperGatedUpgradeable is
         uint256 amount,
         bytes32[] memory merkleProof
     ) public whenNotPaused returns (uint256) {
-        _defend();
         _blacklisted(msg.sender);
         _blacklisted(recipient);
 
@@ -318,7 +314,6 @@ contract SimpleWrapperGatedUpgradeable is
         whenNotPaused
         returns (uint256)
     {
-        _defend();
         _blacklisted(msg.sender);
 
         uint256 allAssets = token.balanceOf(address(msg.sender));
@@ -332,7 +327,6 @@ contract SimpleWrapperGatedUpgradeable is
         whenNotPaused
         returns (uint256)
     {
-        _defend();
         _blacklisted(msg.sender);
 
         if (address(guestList) != address(0)) {
@@ -352,7 +346,6 @@ contract SimpleWrapperGatedUpgradeable is
 
     /// @dev Withdraw all shares for the sender
     function withdraw() external whenNotPaused returns (uint256) {
-        _defend();
         _blacklisted(msg.sender);
 
         return withdraw(balanceOf(msg.sender));
@@ -363,7 +356,6 @@ contract SimpleWrapperGatedUpgradeable is
         whenNotPaused
         returns (uint256 withdrawn)
     {
-        _defend();
         _blacklisted(msg.sender);
 
         withdrawn = _withdraw(msg.sender, shares, true, true); // `true` = withdraw from `bestVault`
@@ -382,6 +374,8 @@ contract SimpleWrapperGatedUpgradeable is
         whenNotPaused
         returns (bool)
     {
+        _blacklisted(msg.sender);
+        _blacklisted(recipient);
         return super.transfer(recipient, amount);
     }
 
@@ -390,6 +384,9 @@ contract SimpleWrapperGatedUpgradeable is
         address recipient,
         uint256 amount
     ) public virtual override whenNotPaused returns (bool) {
+        _blacklisted(msg.sender);
+        _blacklisted(sender);
+        _blacklisted(recipient);
         require(
             !GAC.transferFromDisabled(),
             "transferFrom: GAC transferFromDisabled"

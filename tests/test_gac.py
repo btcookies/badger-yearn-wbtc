@@ -154,160 +154,147 @@ def test_gac_pause(proxy_admin, proxy_admin_gov):
 
 
 
-# def test_gac_blacklist(settAddress, proxy_admin, proxy_admin_gov, bve_cvx, bcvx_crv):
-#     # UPGRADE block
-#     if settAddress in SETT_ADDRESSES_V1:
-#         vault_proxy = SettV1h.at(settAddress)
-#         governance = accounts.at(vault_proxy.governance(), force=True)
+def test_gac_blacklist(proxy_admin, proxy_admin_gov):
+    # UPGRADE block
+    vault_proxy = SimpleWrapperGatedUpgradeable.at(BYVWBTC)
+    governance = accounts.at(vault_proxy.affiliate(), force=True)
 
-#         new_vault_logic = SettV1h.deploy({"from": governance})
+    new_vault_logic = SimpleWrapperGatedUpgradeable.deploy({"from": governance})
 
-#     elif settAddress in SETT_ADDRESSES_V1_1:
-#         vault_proxy = SettV1_1h.at(settAddress)
-#         governance = accounts.at(vault_proxy.governance(), force=True)
+    prev_affiliate = vault_proxy.affiliate()
+    prev_manager = vault_proxy.manager()
+    prev_guardian = vault_proxy.guardian()
+    prev_wd_fee = vault_proxy.withdrawalFee
+    prev_wd_threshold = vault_proxy.withdrawalMaxDeviationThreshold()
+    prev_experimental_mode = vault_proxy.experimentalMode()
+    prev_experimental_vault = vault_proxy.experimentalVault()
 
-#         new_vault_logic = SettV1_1h.deploy({"from": governance})
-#     else:
-#         vault_proxy = SettV4h.at(settAddress)
-#         governance = accounts.at(vault_proxy.governance(), force=True)
+    # Execute upgrade
+    proxy_admin.upgrade(vault_proxy, new_vault_logic, {"from": proxy_admin_gov})
 
-#         new_vault_logic = SettV4h.deploy({"from": governance})
+    assert prev_affiliate == vault_proxy.affiliate()
+    assert prev_manager == vault_proxy.manager()
+    assert prev_guardian == vault_proxy.guardian()
+    assert prev_wd_fee == vault_proxy.withdrawalFee
+    assert prev_wd_threshold == vault_proxy.withdrawalMaxDeviationThreshold()
+    assert prev_experimental_mode == vault_proxy.experimentalMode()
+    assert prev_experimental_vault == vault_proxy.experimentalVault()
 
-#     if bve_cvx.paused() and not settAddress == bve_cvx.address:
-#         bve_gov = accounts.at(bve_cvx.governance(), force=True)
-#         bve_cvx.unpause({"from": bve_gov})
+    ## You can unpause if GAC is paused or unpaused (SettV1 can't be paused directly)
+    if vault_proxy.paused() == True:
+        vault_proxy.unpause({"from": governance})
+    
+    assert vault_proxy.paused() == False
 
-#     if bcvx_crv.paused() and not settAddress == bcvx_crv.address:
-#         bcvx_crv_gov = accounts.at(bcvx_crv.governance(), force=True)
-#         bcvx_crv.unpause({"from": bcvx_crv_gov})
+    ## GAC Pause Block
 
-#     # Execute upgrade
-#     proxy_admin.upgrade(vault_proxy, new_vault_logic, {"from": proxy_admin_gov})
+    ## Get GAC actors
+    gac = interface.IGac(vault_proxy.GAC())
+    gac_gov = accounts.at(gac.DEV_MULTISIG(), force=True)
+    gac_guardian = accounts.at(gac.WAR_ROOM_ACL(), force=True)
 
-#     ## You can unpause if GAC is paused or unpaused (SettV1 can't be paused directly)
-#     try:
-#         if vault_proxy.paused() == True:
-#             vault_proxy.unpause({"from": governance})
-#             assert vault_proxy.paused() == False
-#     except:
-#         pass
+    # Unpausing globally
+    if gac.paused():
+        gac.unpause({"from": gac_gov})
 
-#     ## GAC Pause Block
+    # Focused on testing pausing functionality
+    if gac.transferFromDisabled():
+        gac.enableTransferFrom({"from": gac_gov})
 
-#     ## Get GAC actors
-#     gac = interface.IGac(vault_proxy.GAC())
-#     gac_gov = accounts.at(gac.DEV_MULTISIG(), force=True)
+    ## GAC Blacklist Block
 
-#     # Unpausing globally
-#     if gac.paused():
-#         gac.unpause({"from": gac_gov})
+    # Define actors
+    user = accounts[0]
+    rando = accounts[1]
+    want = interface.ERC20(vault_proxy.token())
 
-#     # Focused on testing pausing functionality
-#     if gac.transferFromDisabled():
-#         gac.enableTransferFrom({"from": gac_gov})
+    # Transfer funds to user
+    whale = accounts.at(WHALE, force=True)
+    whale_balance = int(vault_proxy.balanceOf(WHALE) * .8)
+    vault_proxy.transfer(user.address, whale_balance, {"from": whale})
 
-#     ## GAC Blacklist Block
+    for exploiter in LIST_OF_EXPLOITERS:
+        # Blacklist exploiters
+        blacklisted_role = gac.BLACKLISTED_ROLE()
+        gac.grantRole(blacklisted_role, exploiter, {"from": gac_gov})
 
-#     # Define actors
-#     user = accounts[0]
-#     rando = accounts[1]
-#     want = interface.ERC20(vault_proxy.token())
+        want_balance = want.balanceOf(exploiter)
+        vault_balance = vault_proxy.balanceOf(exploiter)
 
-#     for exploiter in LIST_OF_EXPLOITERS:
-#         # Blacklist exploiters
-#         blacklisted_role = gac.BLACKLISTED_ROLE()
-#         gac.grantRole(blacklisted_role, exploiter, {"from": gac_gov})
+        ## Should revert for exploiters
+        with brownie.reverts("blacklisted"):
+            vault_proxy.deposit(want_balance, [], {"from": exploiter})
 
-#         want_balance = want.balanceOf(exploiter)
-#         vault_balance = vault_proxy.balanceOf(exploiter)
+        with brownie.reverts("blacklisted"):
+            vault_proxy.deposit([], {"from": exploiter})
 
-#         ## Should revert for exploiters
-#         with brownie.reverts("blacklisted"):
-#             vault_proxy.deposit(want_balance, {"from": exploiter})
+        
+        with brownie.reverts("blacklisted"):
+            vault_proxy.depositFor(rando, want_balance, {"from": exploiter})
+        
+        with brownie.reverts("blacklisted"):
+            vault_proxy.depositFor(rando, want_balance, [], {"from": exploiter})
 
-#         if settAddress in SETT_ADDRESSES_V4:
-#             with brownie.reverts("blacklisted"):
-#                 vault_proxy.deposit(want_balance, [], {"from": exploiter})
+        with brownie.reverts("blacklisted"):
+            vault_proxy.depositFor(exploiter, want.balanceOf(user), {"from": user})
 
-#         with brownie.reverts("blacklisted"):
-#             vault_proxy.depositAll({"from": exploiter})
+        with brownie.reverts("blacklisted"):
+            vault_proxy.withdraw(vault_balance, {"from": exploiter})
 
-#         if settAddress in SETT_ADDRESSES_V4:
-#             with brownie.reverts("blacklisted"):
-#                 vault_proxy.depositAll([], {"from": exploiter})
+        with brownie.reverts("blacklisted"):
+            vault_proxy.withdraw({"from": exploiter})
 
-#         if settAddress in [*SETT_ADDRESSES_V1, *SETT_ADDRESSES_V4]:
-#             with brownie.reverts("blacklisted"):
-#                 vault_proxy.depositFor(rando, want_balance, {"from": exploiter})
+        with brownie.reverts("blacklisted"):
+            vault_proxy.transfer(rando, vault_balance, {"from": exploiter})
 
-#             with brownie.reverts("blacklisted"):
-#                 vault_proxy.depositFor(exploiter, want.balanceOf(user), {"from": user})
+        with brownie.reverts("blacklisted"):
+            vault_proxy.transfer(exploiter, vault_proxy.balanceOf(user), {"from": user})
 
-#             if settAddress in SETT_ADDRESSES_V4:
-#                 with brownie.reverts("blacklisted"):
-#                     vault_proxy.depositFor(rando, want_balance, [], {"from": exploiter})
+        vault_proxy.approve(exploiter, MAX_UINT256, {"from": user})
 
-#                 with brownie.reverts("blacklisted"):
-#                     vault_proxy.depositFor(
-#                         exploiter, want.balanceOf(user), [], {"from": user}
-#                     )
+        with brownie.reverts("blacklisted"):
+            vault_proxy.transferFrom(
+                user, rando, vault_proxy.balanceOf(user), {"from": exploiter}
+            )
 
-#         with brownie.reverts("blacklisted"):
-#             vault_proxy.withdraw(vault_balance, {"from": exploiter})
+        vault_proxy.approve(rando, MAX_UINT256, {"from": user})
 
-#         with brownie.reverts("blacklisted"):
-#             vault_proxy.withdrawAll({"from": exploiter})
+        with brownie.reverts("blacklisted"):
+            vault_proxy.transferFrom(
+                user, exploiter, vault_proxy.balanceOf(user), {"from": rando}
+            )
 
-#         with brownie.reverts("blacklisted"):
-#             vault_proxy.transfer(rando, vault_balance, {"from": exploiter})
+        vault_proxy.approve(rando, MAX_UINT256, {"from": exploiter})
 
-#         with brownie.reverts("blacklisted"):
-#             vault_proxy.transfer(exploiter, vault_proxy.balanceOf(user), {"from": user})
+        with brownie.reverts("blacklisted"):
+            vault_proxy.transferFrom(exploiter, rando, vault_balance, {"from": rando})
 
-#         vault_proxy.approve(exploiter, MAX_UINT256, {"from": user})
+    ## No reverts for user
+    vault_balance = vault_proxy.balanceOf(user)
 
-#         with brownie.reverts("blacklisted"):
-#             vault_proxy.transferFrom(
-#                 user, rando, vault_proxy.balanceOf(user), {"from": exploiter}
-#             )
+    # withdraw some
+    vault_proxy.withdraw(int(vault_balance * .6), {"from": user})
+    want_balance = want.balanceOf(user)
 
-#         vault_proxy.approve(rando, MAX_UINT256, {"from": user})
+    # deposit some
+    vault_proxy.deposit(want_balance, [], {"from": user})
+    
+    # deposit rest for rando
+    want_balance = want.balanceOf(user)
+    vault_proxy.depositFor(rando, want_balance, [], {"from": exploiter})
 
-#         with brownie.reverts("blacklisted"):
-#             vault_proxy.transferFrom(
-#                 user, exploiter, vault_proxy.balanceOf(user), {"from": rando}
-#             )
+    # withdraw some
+    vault_balance = vault_proxy.balanceOf(user)
+    vault_proxy.withdraw(int(vault_balance * .6), {"from": user})
 
-#         vault_proxy.approve(rando, MAX_UINT256, {"from": exploiter})
+    # send some
+    vault_balance = vault_proxy.balanceOf(user)
+    vault_proxy.transfer(rando, int(vault_balance * .6), {"from": user})
 
-#         with brownie.reverts("blacklisted"):
-#             vault_proxy.transferFrom(exploiter, rando, vault_balance, {"from": rando})
+    # send all for
+    vault_balance = vault_proxy.balanceOf(rando)
+    vault_proxy.approve(rando, MAX_UINT256, {"from": user})
+    vault_proxy.transferFrom(user, rando, vault_balance, {"from": rando})
 
-#     ## No reverts for user
-#     want_balance = want.balanceOf(user)
-#     vault_balance = vault_proxy.balanceOf(user)
-
-#     vault_proxy.deposit(want_balance, {"from": user})
-
-#     if settAddress in SETT_ADDRESSES_V4:
-#         vault_proxy.deposit(want_balance, [], {"from": user})
-
-#     vault_proxy.depositAll({"from": user})
-
-#     if settAddress in SETT_ADDRESSES_V4:
-#         vault_proxy.depositAll([], {"from": user})
-
-#     if settAddress in [*SETT_ADDRESSES_V1, *SETT_ADDRESSES_V4]:
-#         vault_proxy.depositFor(rando, want_balance, {"from": user})
-
-#         if settAddress in SETT_ADDRESSES_V4:
-#             vault_proxy.depositFor(rando, want_balance, [], {"from": user})
-
-#     vault_proxy.withdraw(vault_balance, {"from": user})
-
-#     vault_proxy.withdrawAll({"from": user})
-
-#     vault_proxy.transfer(rando, vault_balance, {"from": user})
-
-#     vault_proxy.approve(rando, MAX_UINT256, {"from": user})
-#     vault_proxy.transferFrom(user, rando, vault_balance, {"from": rando})
+    # withdraw all
+    vault_proxy.withdraw({"from": user})
