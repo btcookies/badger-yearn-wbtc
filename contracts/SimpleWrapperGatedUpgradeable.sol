@@ -497,12 +497,12 @@ contract SimpleWrapperGatedUpgradeable is
 
         // Process withdrawal fee
         if (withdrawalFee > 0 && processWithdrawalFee) {
-            uint256 withdrawalToAffiliate =
+            uint256 withdrawalToTreasury =
                 withdrawn.mul(withdrawalFee).div(MAX_BPS);
-            withdrawn = withdrawn.sub(withdrawalToAffiliate);
+            withdrawn = withdrawn.sub(withdrawalToTreasury);
 
-            token.safeTransfer(affiliate, withdrawalToAffiliate);
-            emit WithdrawalFee(affiliate, withdrawalToAffiliate);
+            token.safeTransfer(treasury, withdrawalToTreasury);
+            emit WithdrawalFee(treasury, withdrawalToTreasury);
         }
 
         // `receiver` now has `withdrawn` tokens as balance

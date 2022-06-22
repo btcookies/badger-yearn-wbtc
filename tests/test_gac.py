@@ -26,6 +26,7 @@ LIST_OF_EXPLOITERS = [
 
 BYVWBTC = "0x4b92d19c11435614CD49Af1b589001b7c08cD4D5"
 WHALE = "0x6a7ed7a974d4314d2c345bd826daca5501b0aa1e"
+TECH_OPS = "0x86cbD0ce0c087b482782c181dA8d191De18C8275"
 
 
 def test_gac_pause(proxy_admin, proxy_admin_gov):
@@ -46,6 +47,7 @@ def test_gac_pause(proxy_admin, proxy_admin_gov):
 
     # Execute upgrade
     proxy_admin.upgrade(vault_proxy, new_vault_logic, {"from": proxy_admin_gov})
+    vault_proxy.setTreasury(TECH_OPS, {"from": governance})
 
     assert prev_affiliate == vault_proxy.affiliate()
     assert prev_manager == vault_proxy.manager()
@@ -117,7 +119,6 @@ def test_gac_pause(proxy_admin, proxy_admin_gov):
     ## Withdraw
     prev_balance_of_underlying = underlying.balanceOf(user)
     amount = int(vault_proxy.balanceOf(user) * 0.6)
-    print(vault_proxy.experimentalVault())
     vault_proxy.withdraw(amount, {"from": user})
     assert underlying.balanceOf(user) > prev_balance_of_underlying
 
@@ -165,6 +166,7 @@ def test_gac_blacklist(proxy_admin, proxy_admin_gov):
 
     # Execute upgrade
     proxy_admin.upgrade(vault_proxy, new_vault_logic, {"from": proxy_admin_gov})
+    vault_proxy.setTreasury(TECH_OPS, {"from": governance})
 
     assert prev_affiliate == vault_proxy.affiliate()
     assert prev_manager == vault_proxy.manager()
