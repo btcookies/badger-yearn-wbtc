@@ -270,7 +270,8 @@ def test_gac_blacklist(proxy_admin, proxy_admin_gov):
     want_balance = want.balanceOf(user)
 
     # deposit some
-    vault_proxy.deposit(want_balance, [], {"from": user})
+    want.approve(vault_proxy, MAX_UINT256, {"from": user})
+    vault_proxy.deposit(int(want_balance / 2), [], {"from": user})
 
     # deposit rest for rando
     want_balance = want.balanceOf(user)
@@ -285,9 +286,9 @@ def test_gac_blacklist(proxy_admin, proxy_admin_gov):
     vault_proxy.transfer(rando, int(vault_balance * 0.6), {"from": user})
 
     # send all for
-    vault_balance = vault_proxy.balanceOf(rando)
+    vault_balance = vault_proxy.balanceOf(user)
     vault_proxy.approve(rando, MAX_UINT256, {"from": user})
     vault_proxy.transferFrom(user, rando, vault_balance, {"from": rando})
 
     # withdraw all
-    vault_proxy.withdraw({"from": user})
+    vault_proxy.withdraw({"from": rando})
