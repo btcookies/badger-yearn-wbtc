@@ -1,13 +1,8 @@
 import brownie
-from brownie import (
-    SimpleWrapperGatedUpgradeable,
-    interface, 
-    accounts, 
-    ERC20Upgradeable
-)
+from brownie import SimpleWrapperGatedUpgradeable, interface, accounts, ERC20Upgradeable
 import pytest
 from badger_utils.token_utils.distribute_from_whales_realtime import (
-    distribute_from_whales_realtime_percentage
+    distribute_from_whales_realtime_percentage,
 )
 
 """
@@ -31,6 +26,7 @@ LIST_OF_EXPLOITERS = [
 
 BYVWBTC = "0x4b92d19c11435614CD49Af1b589001b7c08cD4D5"
 WHALE = "0x6a7ed7a974d4314d2c345bd826daca5501b0aa1e"
+
 
 def test_gac_pause(proxy_admin, proxy_admin_gov):
 
@@ -62,7 +58,7 @@ def test_gac_pause(proxy_admin, proxy_admin_gov):
     ## You can unpause if GAC is paused or unpaused (SettV1 can't be paused directly)
     if vault_proxy.paused() == True:
         vault_proxy.unpause({"from": governance})
-    
+
     assert vault_proxy.paused() == False
 
     ## GAC Pause Block
@@ -81,13 +77,13 @@ def test_gac_pause(proxy_admin, proxy_admin_gov):
     # Unpausing globally
     if gac.paused() == True:
         gac.unpause({"from": gac_gov})
-        
+
     assert gac.paused() == False
 
     # Transfer funds to user
     user = accounts[3]
     whale = accounts.at(WHALE, force=True)
-    whale_balance = int(vault_proxy.balanceOf(WHALE) * .8)
+    whale_balance = int(vault_proxy.balanceOf(WHALE) * 0.8)
     vault_proxy.transfer(user.address, whale_balance, {"from": whale})
 
     assert vault_proxy.balanceOf(user) > 0
@@ -120,7 +116,7 @@ def test_gac_pause(proxy_admin, proxy_admin_gov):
 
     ## Withdraw
     prev_balance_of_underlying = underlying.balanceOf(user)
-    amount = int(vault_proxy.balanceOf(user) * .6)
+    amount = int(vault_proxy.balanceOf(user) * 0.6)
     print(vault_proxy.experimentalVault())
     vault_proxy.withdraw(amount, {"from": user})
     assert underlying.balanceOf(user) > prev_balance_of_underlying
@@ -140,7 +136,6 @@ def test_gac_pause(proxy_admin, proxy_admin_gov):
     assert underlying.balanceOf(user) < prev_balance_of_underlying
     assert vault_proxy.balanceOf(user) > prev_shares
 
-
     ## Transfer From
     rando = accounts[1]
     amount = vault_proxy.balanceOf(user) / 4
@@ -151,7 +146,6 @@ def test_gac_pause(proxy_admin, proxy_admin_gov):
     # Transfer
     vault_proxy.transfer(accounts[2], amount, {"from": rando})
     assert vault_proxy.balanceOf(accounts[2]) == amount
-
 
 
 def test_gac_blacklist(proxy_admin, proxy_admin_gov):
@@ -183,7 +177,7 @@ def test_gac_blacklist(proxy_admin, proxy_admin_gov):
     ## You can unpause if GAC is paused or unpaused (SettV1 can't be paused directly)
     if vault_proxy.paused() == True:
         vault_proxy.unpause({"from": governance})
-    
+
     assert vault_proxy.paused() == False
 
     ## GAC Pause Block
@@ -210,7 +204,7 @@ def test_gac_blacklist(proxy_admin, proxy_admin_gov):
 
     # Transfer funds to user
     whale = accounts.at(WHALE, force=True)
-    whale_balance = int(vault_proxy.balanceOf(WHALE) * .8)
+    whale_balance = int(vault_proxy.balanceOf(WHALE) * 0.8)
     vault_proxy.transfer(user.address, whale_balance, {"from": whale})
 
     for exploiter in LIST_OF_EXPLOITERS:
@@ -228,10 +222,9 @@ def test_gac_blacklist(proxy_admin, proxy_admin_gov):
         with brownie.reverts("blacklisted"):
             vault_proxy.deposit([], {"from": exploiter})
 
-        
         with brownie.reverts("blacklisted"):
             vault_proxy.depositFor(rando, want_balance, {"from": exploiter})
-        
+
         with brownie.reverts("blacklisted"):
             vault_proxy.depositFor(rando, want_balance, [], {"from": exploiter})
 
@@ -273,23 +266,23 @@ def test_gac_blacklist(proxy_admin, proxy_admin_gov):
     vault_balance = vault_proxy.balanceOf(user)
 
     # withdraw some
-    vault_proxy.withdraw(int(vault_balance * .6), {"from": user})
+    vault_proxy.withdraw(int(vault_balance * 0.6), {"from": user})
     want_balance = want.balanceOf(user)
 
     # deposit some
     vault_proxy.deposit(want_balance, [], {"from": user})
-    
+
     # deposit rest for rando
     want_balance = want.balanceOf(user)
-    vault_proxy.depositFor(rando, want_balance, [], {"from": exploiter})
+    vault_proxy.depositFor(rando, want_balance, [], {"from": user})
 
     # withdraw some
     vault_balance = vault_proxy.balanceOf(user)
-    vault_proxy.withdraw(int(vault_balance * .6), {"from": user})
+    vault_proxy.withdraw(int(vault_balance * 0.6), {"from": user})
 
     # send some
     vault_balance = vault_proxy.balanceOf(user)
-    vault_proxy.transfer(rando, int(vault_balance * .6), {"from": user})
+    vault_proxy.transfer(rando, int(vault_balance * 0.6), {"from": user})
 
     # send all for
     vault_balance = vault_proxy.balanceOf(rando)

@@ -15,6 +15,7 @@ from config import (
 from dotmap import DotMap
 import pytest
 
+
 @pytest.fixture
 def proxy_admin():
     """
@@ -28,7 +29,7 @@ def proxy_admin():
 @pytest.fixture
 def proxy_admin_gov():
     """
-        Also found at proxy_admin.owner()
+    Also found at proxy_admin.owner()
     """
     return accounts.at("0x21cf9b77f88adf8f8c98d7e33fe601dc57bc0893", force=True)
 
@@ -90,6 +91,7 @@ def settKeeper(vault):
 @pytest.fixture
 def strategyKeeper(strategy):
     return accounts.at(strategy.keeper(), force=True)
+
 
 ## Forces reset before each test
 @pytest.fixture(autouse=True)
