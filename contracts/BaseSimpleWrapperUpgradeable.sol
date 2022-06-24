@@ -34,7 +34,10 @@ abstract contract BaseSimpleWrapperUpgradeable is Initializable {
     // VaultsAPI.depositLimit is unlimited
     uint256 constant UNCAPPED_DEPOSITS = type(uint256).max;
 
-    function _BaseSimpleWrapperUpgradeable_init(address _token, address _registry) internal initializer {
+    function _BaseSimpleWrapperUpgradeable_init(
+        address _token,
+        address _registry
+    ) internal initializer {
         token = IERC20Upgradeable(_token);
         // v2.registry.ychad.eth
         registry = RegistryAPI(_registry);
