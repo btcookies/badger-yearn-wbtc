@@ -1,9 +1,5 @@
 import brownie
-from brownie import SimpleWrapperGatedUpgradeable, interface, accounts, ERC20Upgradeable
-import pytest
-from badger_utils.token_utils.distribute_from_whales_realtime import (
-    distribute_from_whales_realtime_percentage,
-)
+from brownie import SimpleWrapperGatedUpgradeable, interface, accounts
 
 """
 Test for integration of GAC pausing functionalities to Setts
@@ -114,7 +110,7 @@ def test_gac_pause(proxy_admin, proxy_admin_gov):
 
     # Testing all operations
 
-    underlying = ERC20Upgradeable.at(vault_proxy.token())
+    underlying = interface.IERC20(vault_proxy.token())
 
     ## Withdraw
     prev_balance_of_underlying = underlying.balanceOf(user)
