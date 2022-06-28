@@ -465,11 +465,15 @@ contract SimpleWrapperGatedUpgradeable is
         returns (uint256 shares)
     {
         VaultAPI _bestVault = bestVault();
-        token.safeTransferFrom(depositor, address(this), amount);
+        
+        // NOTE: Caching avoids SLOADs
+        IERC20Upgradeable cachedToken = token;
 
-        if (token.allowance(address(this), address(_bestVault)) < amount) {
-            token.safeApprove(address(_bestVault), 0); // Avoid issues with some tokens requiring 0
-            token.safeApprove(address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
+        cachedToken.safeTransferFrom(depositor, address(this), amount);
+
+        if (cachedToken.allowance(address(this), address(_bestVault)) < amount) {
+            cachedToken.safeApprove(address(_bestVault), 0); // Avoid issues with some tokens requiring 0
+            cachedToken.safeApprove(address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
         }
 
         shares = _bestVault.deposit(amount);
@@ -497,17 +501,21 @@ contract SimpleWrapperGatedUpgradeable is
         }
 
         // Process withdrawal fee
-        if (withdrawalFee > 0 && processWithdrawalFee) {
+        // NOTE: Caching saves an extra SLOAD = 97 gas
+        address feeRecipient = treasury;
+        IERC20Upgradeable cachedToken = token;
+
+        if (withdrawalFee > 0 && processWithdrawalFee && feeRecipient != address(0)) {
             uint256 withdrawalToTreasury =
                 withdrawn.mul(withdrawalFee).div(MAX_BPS);
             withdrawn = withdrawn.sub(withdrawalToTreasury);
 
-            token.safeTransfer(treasury, withdrawalToTreasury);
-            emit WithdrawalFee(treasury, withdrawalToTreasury);
+            cachedToken.safeTransfer(feeRecipient, withdrawalToTreasury);
+            emit WithdrawalFee(feeRecipient, withdrawalToTreasury);
         }
 
         // `receiver` now has `withdrawn` tokens as balance
-        if (receiver != address(this)) token.safeTransfer(receiver, withdrawn);
+        if (receiver != address(this)) cachedToken.safeTransfer(receiver, withdrawn);
     }
 
     // Require that difference between expected and actual values is less than the deviation threshold percentage
