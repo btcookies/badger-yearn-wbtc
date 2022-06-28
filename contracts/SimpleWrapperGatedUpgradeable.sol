@@ -465,11 +465,15 @@ contract SimpleWrapperGatedUpgradeable is
         returns (uint256 shares)
     {
         VaultAPI _bestVault = bestVault();
-        token.safeTransferFrom(depositor, address(this), amount);
+        
+        // NOTE: Caching avoids SLOADs
+        IERC20Upgradeable cachedToken = token;
 
-        if (token.allowance(address(this), address(_bestVault)) < amount) {
-            token.safeApprove(address(_bestVault), 0); // Avoid issues with some tokens requiring 0
-            token.safeApprove(address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
+        cachedToken.safeTransferFrom(depositor, address(this), amount);
+
+        if (cachedToken.allowance(address(this), address(_bestVault)) < amount) {
+            cachedToken.safeApprove(address(_bestVault), 0); // Avoid issues with some tokens requiring 0
+            cachedToken.safeApprove(address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
         }
 
         shares = _bestVault.deposit(amount);
