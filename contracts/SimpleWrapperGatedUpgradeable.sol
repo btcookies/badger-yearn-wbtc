@@ -41,7 +41,8 @@ contract SimpleWrapperGatedUpgradeable is
     /// @notice A record of states for signing / validating signatures
     mapping(address => uint256) public nonces;
 
-    address public affiliate;
+    /// @notice equivalent to `governance` in Vaults
+    address public affiliate; 
 
     address public pendingAffiliate;
 
