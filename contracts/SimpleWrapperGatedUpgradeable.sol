@@ -42,7 +42,7 @@ contract SimpleWrapperGatedUpgradeable is
     mapping(address => uint256) public nonces;
 
     /// @notice equivalent to `governance` in Vaults
-    address public affiliate; 
+    address public affiliate;
 
     address public pendingAffiliate;
 
@@ -465,13 +465,15 @@ contract SimpleWrapperGatedUpgradeable is
         returns (uint256 shares)
     {
         VaultAPI _bestVault = bestVault();
-        
+
         // NOTE: Caching avoids SLOADs
         IERC20Upgradeable cachedToken = token;
 
         cachedToken.safeTransferFrom(depositor, address(this), amount);
 
-        if (cachedToken.allowance(address(this), address(_bestVault)) < amount) {
+        if (
+            cachedToken.allowance(address(this), address(_bestVault)) < amount
+        ) {
             cachedToken.safeApprove(address(_bestVault), 0); // Avoid issues with some tokens requiring 0
             cachedToken.safeApprove(address(_bestVault), UNLIMITED_APPROVAL); // Vaults are trusted
         }
@@ -505,7 +507,11 @@ contract SimpleWrapperGatedUpgradeable is
         address feeRecipient = treasury;
         IERC20Upgradeable cachedToken = token;
 
-        if (withdrawalFee > 0 && processWithdrawalFee && feeRecipient != address(0)) {
+        if (
+            withdrawalFee > 0 &&
+            processWithdrawalFee &&
+            feeRecipient != address(0)
+        ) {
             uint256 withdrawalToTreasury =
                 withdrawn.mul(withdrawalFee).div(MAX_BPS);
             withdrawn = withdrawn.sub(withdrawalToTreasury);
@@ -515,7 +521,8 @@ contract SimpleWrapperGatedUpgradeable is
         }
 
         // `receiver` now has `withdrawn` tokens as balance
-        if (receiver != address(this)) cachedToken.safeTransfer(receiver, withdrawn);
+        if (receiver != address(this))
+            cachedToken.safeTransfer(receiver, withdrawn);
     }
 
     // Require that difference between expected and actual values is less than the deviation threshold percentage
