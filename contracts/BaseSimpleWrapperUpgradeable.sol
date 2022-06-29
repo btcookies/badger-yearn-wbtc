@@ -2,15 +2,15 @@
 pragma solidity ^0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "deps/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "deps/@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
-import "deps/@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
-import "deps/@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import "deps/@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
-import "deps/@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
+import "../deps/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "../deps/@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
+import "../deps/@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
+import "../deps/@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "../deps/@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "../deps/@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
 
-import "interfaces/yearn/VaultApi.sol";
-import "interfaces/yearn/RegistryApi.sol";
+import "../interfaces/yearn/VaultApi.sol";
+import "../interfaces/yearn/RegistryApi.sol";
 
 abstract contract BaseSimpleWrapperUpgradeable is Initializable {
     using MathUpgradeable for uint256;

@@ -2,7 +2,7 @@
 pragma solidity >=0.6.0 <0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "deps/@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../../deps/@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 struct StrategyParams {
     uint256 performanceFee;

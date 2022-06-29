@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
 
-import "deps/@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "deps/@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import "../deps/@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "../deps/@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "./BaseSimpleWrapperUpgradeable.sol";
 
-import "interfaces/badger/IGac.sol";
-import "interfaces/yearn/VaultApi.sol";
-import "interfaces/yearn/BadgerGuestlistApi.sol";
+import "../interfaces/badger/IGac.sol";
+import "../interfaces/yearn/VaultApi.sol";
+import "../interfaces/yearn/BadgerGuestlistApi.sol";
 
 /**
     == Access Control ==

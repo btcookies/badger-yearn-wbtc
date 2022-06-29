@@ -549,8 +549,6 @@ library AddressUpgradeable {
     }
 }
 
-// File deps/@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol
-
 pragma solidity ^0.6.0;
 
 /**
